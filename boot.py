@@ -1,3 +1,8 @@
+
+# Written by Daniel Corcoran for Bearcat Solar Car team
+# Mail: corcordp@mail.uc.edu
+
+
 from imutils.video import VideoStream
 import cv2
 import numpy as np
@@ -6,13 +11,27 @@ import RPi.GPIO as GPIO
 # GPIO settings
 GPIO.setwarnings(False)
 GPIO.setmode(GPIO.BOARD)
-GPIO.setup(10, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) 
-GPIO.setup(18, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
-GPIO.setup(22, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
 
-GPIO.setup(16, GPIO.OUT)
-GPIO.setup(11, GPIO.OUT)
-GPIO.setup(13, GPIO.OUT)
+GPIO.setup(10, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) #Hazard switch
+GPIO.setup(18, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) # Left turn to pi
+GPIO.setup(22, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) # Right turn to pi
+GPIO.setup(21, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) # Headlights
+
+L_BRIGHT = 16
+R_BRIGHT = 19
+RTS = 11
+LTS = 13
+FRTS = 7
+FLTS = 5
+
+GPIO.setup(L_BRIGHT, GPIO.OUT) # Pi to relay 8 - left headlight
+GPIO.setup(R_BRIGHT, GPIO.OUT) # Pi to relay 7 - right headlight
+GPIO.setup(RTS, GPIO.OUT) # Pi to relay 14 - RTS
+GPIO.setup(LTS, GPIO.OUT) # Pi to relay 12 - LTS
+GPIO.setup(FRTS, GPIO.OUT) # Pi to relay 15 - FRTS
+GPIO.setup(FLTS, GPIO.OUT) # Pi to relay 13 - FLTS
+#GPIO.setup3     
+
 
 
 # Create a VideoCapture object and read from input file
@@ -43,35 +62,68 @@ tick = 0
 
 def read_switches():
     global tick
+    tick_const = 10
     if GPIO.input(10) == GPIO.HIGH:
 	# TURN ON RELAY SWITCH
-        GPIO.output(16, True)
-        print("Hazards On")
+        tick = tick + 1
+        print(tick)
+        if tick < tick_const:
+            pass
+            #GPIO.output(16, True)
+        elif (2 * tick_const) - 1 > tick >- tick_const:
+            # GPIO.output(16, False)
+            pass
+        else:
+            tick = 0
     else:
 	# TURN OFF RELAY SWITCH
-        GPIO.output(16, False)
+        pass
+        #GPIO.output(16, False)
         #print("LOW")
 
     if GPIO.input(18) == GPIO.HIGH:
-        print("Left turn signal on")
+        print("Right turn signal on")
         tick = tick + 1
-        if tick < 10:
-            GPIO.output(11, True)
-        elif 20 > tick > 10:
-            GPIO.output(11, False)
+        print(tick)
+        GPIO.output(FRTS, False)
+        if tick < tick_const:
+            print("ON")
+            GPIO.output(RTS, True)
+        elif (2 * tick_const) - 1 > tick >= tick_const:
+            print("OFF")
+            GPIO.output(RTS, False)
         else:
             tick = 0
 
     else:
-        GPIO.output(11, False)
+        GPIO.output(RTS, True)
+        GPIO.output(FRTS, True)
 
     if GPIO.input(22) == GPIO.HIGH:
-        print("Right turn signal on")
-        GPIO.output(13, True)
+        print("Left turn signal on")
+        tick = tick + 1
+        print(tick)
+        GPIO.output(FLTS, False)
+        if tick < tick_const:
+            print("ON")
+            GPIO.output(LTS, True)
+        elif (2 * tick_const) - 1 > tick >= tick_const:
+            print("OFF")
+            GPIO.output(LTS, False)
+        else:
+            tick = 0
+
     else:
-        GPIO.output(13, False)
+        GPIO.output(FLTS, True)
+        GPIO.output(LTS, True)
 
-
+    if GPIO.input(21) == GPIO.HIGH:
+        print("Headlights On")
+        GPIO.output(R_BRIGHT, False)
+        GPIO.output(L_BRIGHT, False)
+    else:
+        GPIO.output(R_BRIGHT, True)
+        GPIO.output(L_BRIGHT, True)
 
 
 def getStatsDisplay(stats_w):
@@ -121,8 +173,8 @@ while(cap.isOpened()):
     read_switches()
 
     # Display the resulting frame
-    cv2.namedWindow("test", cv2.WND_PROP_FULLSCREEN)
-    cv2.setWindowProperty("test", cv2.WND_PROP_FULLSCREEN, 1)
+    #cv2.namedWindow("test", cv2.WND_PROP_FULLSCREEN)
+    #cv2.setWindowProperty("test", cv2.WND_PROP_FULLSCREEN, 1)
 
     frame = cv2.resize(frame, (1080 - stats_width, 720))
 
