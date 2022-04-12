@@ -1,7 +1,7 @@
 
 # Written by Daniel Corcoran for Bearcat Solar Car team
 # Mail: corcordp@mail.uc.edu
-
+# autostart location: /etc/xdg/autostart/display.desktop
 
 from imutils.video import VideoStream
 import cv2
@@ -12,7 +12,7 @@ import RPi.GPIO as GPIO
 GPIO.setwarnings(False)
 GPIO.setmode(GPIO.BOARD)
 
-GPIO.setup(10, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) #Hazard switch
+GPIO.setup(12, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) #Hazard switch
 GPIO.setup(18, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) # Left turn to pi
 GPIO.setup(22, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) # Right turn to pi
 GPIO.setup(21, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) # Headlights
@@ -30,7 +30,7 @@ GPIO.setup(RTS, GPIO.OUT) # Pi to relay 14 - RTS
 GPIO.setup(LTS, GPIO.OUT) # Pi to relay 12 - LTS
 GPIO.setup(FRTS, GPIO.OUT) # Pi to relay 15 - FRTS
 GPIO.setup(FLTS, GPIO.OUT) # Pi to relay 13 - FLTS
-#GPIO.setup3     
+#GPIO.setup3
 
 
 
@@ -43,8 +43,8 @@ if (cap.isOpened()== False):
   print("Error opening video stream or file")
 
 # Read until video is completed
-#cv2.namedWindow("Bearcat Solar Car", cv2.WND_PROP_FULLSCREEN)
-#cv2.setWindowProperty("window", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+cv2.namedWindow("window", cv2.WND_PROP_FULLSCREEN)
+cv2.setWindowProperty("window", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
 
 def get_mph():
     return 30
@@ -62,24 +62,32 @@ tick = 0
 
 def read_switches():
     global tick
+    hazards_bool = False
     tick_const = 10
-    if GPIO.input(10) == GPIO.HIGH:
-	# TURN ON RELAY SWITCH
+    if GPIO.input(12) == GPIO.HIGH:
+        # HAZARDS
+        hazards_bool = True
+        GPIO.output(FLTS, False)
+        GPIO.output(FRTS, False)
         tick = tick + 1
+        print("Hazards")
         print(tick)
         if tick < tick_const:
-            pass
-            #GPIO.output(16, True)
+            print("ON")
+            GPIO.output(RTS, False)
+            GPIO.output(LTS, False)
         elif (2 * tick_const) - 1 > tick >- tick_const:
-            # GPIO.output(16, False)
-            pass
+            print("OFF")
+            GPIO.output(RTS, True)
+            GPIO.output(LTS, True)
         else:
             tick = 0
     else:
-	# TURN OFF RELAY SWITCH
-        pass
-        #GPIO.output(16, False)
-        #print("LOW")
+
+        GPIO.output(FLTS, True)
+        GPIO.output(FRTS, True)
+        GPIO.output(RTS, True)
+        GPIO.output(LTS, True)
 
     if GPIO.input(18) == GPIO.HIGH:
         print("Right turn signal on")
@@ -95,7 +103,7 @@ def read_switches():
         else:
             tick = 0
 
-    else:
+    elif hazards_bool == False:
         GPIO.output(RTS, True)
         GPIO.output(FRTS, True)
 
@@ -113,7 +121,7 @@ def read_switches():
         else:
             tick = 0
 
-    else:
+    elif hazards_bool == False:
         GPIO.output(FLTS, True)
         GPIO.output(LTS, True)
 
@@ -176,13 +184,13 @@ while(cap.isOpened()):
     #cv2.namedWindow("test", cv2.WND_PROP_FULLSCREEN)
     #cv2.setWindowProperty("test", cv2.WND_PROP_FULLSCREEN, 1)
 
-    frame = cv2.resize(frame, (1080 - stats_width, 720))
+    frame = cv2.resize(frame, (1280 - stats_width, 720))
 
     stats = getStatsDisplay(stats_width)
 
     frame = np.hstack((stats, frame))
 
-    #cv2.imshow('Frame',frame)
+    cv2.imshow('Frame',frame)
     # Press Q on keyboard to  exit
     if cv2.waitKey(25) & 0xFF == ord('q'):
       break
